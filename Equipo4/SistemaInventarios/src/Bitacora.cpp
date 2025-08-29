@@ -5,83 +5,122 @@
 #include<cstdlib>
 #include<conio.h>
 #include<iomanip>
-//bitacaora es un hist�rico
+#include<algorithm>
+#include<ctime>
+#include<vector>
+#include<sstream>
+#include<cstring>
+//bitacora por Ferdynand Monroy 9959-24-14049
+//inicio de bitacora abril 2025
 using namespace std;
 
 void bitacora::menu()
 {
     int choice;
-	char x;
-	do
-    {
-	system("cls");
+    do {
+        system("cls"); //tabla menú
 
-	cout<<"\t\t\t-------------------------------"<<endl;
-	cout<<"\t\t\t |   SISTEMA GESTION BITACORA  |"<<endl;
-	cout<<"\t\t\t-------------------------------"<<endl;
-	cout<<"\t\t\t 1. Despliegue Bitacora"<<endl;
-	cout<<"\t\t\t 2. Exit"<<endl;
+        cout<<"\t\t\t-------------------------------"<<endl;
+        cout<<"\t\t\t |   SISTEMA GESTION BITACORA  |"<<endl;
+        cout<<"\t\t\t-------------------------------"<<endl;
+        cout<<"\t\t\t 1. Despliegue Bitacora"<<endl;
+        cout<<"\t\t\t 2. Exit"<<endl;
+        cout<<"\t\t\t-------------------------------"<<endl;
+        cout<<"\t\t\tOpcion a escoger:[1/2]"<<endl;
+        cout<<"\t\t\t-------------------------------"<<endl;
+        cout<<"\t\t\tIngresa tu Opcion: ";
+        cin>>choice;
 
-	cout<<"\t\t\t-------------------------------"<<endl;
-	cout<<"\t\t\tOpcion a escoger:[1/2]"<<endl;
-	cout<<"\t\t\t-------------------------------"<<endl;
-	cout<<"\t\t\tIngresa tu Opcion: ";
-    cin>>choice;
-
-    switch(choice)
-    {
-    case 1:
-  		desplegar();
-		break;
-	case 2:
-		break;
-	default:
-		cout<<"\n\t\t\t Opcion invalida...Por favor prueba otra vez..";
-        cin.get();
-	}
-    }while(choice!= 2);
-}
-void bitacora::insertar(string nombre, string aplicacion, string accion)
-{
-	system("cls");
-	fstream file;
-	file.open("bitacora.txt", ios::app | ios::out);
-	file<<std::left<<std::setw(15)<< nombre <<std::left<<std::setw(15)<< aplicacion <<std::left<<std::setw(15)<< accion << "\n";
-	file.close();
-}
-void bitacora::desplegar()
-{
-	system("cls");
-	fstream file;
-	int total=0;
-	cout<<"\n-------------------------Tabla de Detalles de Bitacora -------------------------"<<endl;
-	file.open("bitacora.txt",ios::in);
-	if(!file)
-	{
-		cout<<"\n\t\t\tNo hay informaci�n...";
-		file.close();
-	}
-	else
-	{
-		file >> nombre >> aplicacion >> accion;
-		while(!file.eof())
-		{
-			total++;
-			cout<<"\n\n\t\t\t Nombre Usuario: "<<nombre<<endl;
-			cout<<"\t\t\t No. Aplicacion: "<<aplicacion<<endl;
-            cout<<"\t\t\t Accion realizada: "<<accion<<endl;
-
-			file >> nombre >> aplicacion >> accion;
-		}
-		if(total==0)
-		{
-			cout<<"\n\t\t\tNo hay informacion...";
-		}
-		system("pause");
-	}
-	file.close();
+        switch(choice)
+        {
+        case 1:
+            desplegar();
+            break;
+        case 2:
+            break;
+        default:
+            cout<<"\n\t\t\t Opcion invalida...Por favor prueba otra vez..";
+            cin.get();
+        }
+    } while(choice != 2);
 }
 
+struct EntradaBitacora {
+    int codigo;
+    char nombre[20];
+    char aplicacion[20];
+    char accion[100];
+    char fecha[30];
+    char hora[10];
+};
+
+void bitacora::insertar(string nombre, int codigoDummy, string aplicacion, string accion) {
+    fstream binFile;
+    EntradaBitacora entrada;
+
+    int ultimoCodigo = 1999;
+
+    // Leer el utlimo código
+    binFile.open("bitacora.dat", ios::in | ios::binary);
+    if (binFile) {
+        EntradaBitacora temp;
+        while (binFile.read(reinterpret_cast<char*>(&temp), sizeof(temp))) {
+            if (temp.codigo > ultimoCodigo)
+                ultimoCodigo = temp.codigo;
+        }
+        binFile.close();
+    }
+
+    int nuevoCodigo = ultimoCodigo + 1;
+    if (nuevoCodigo > 2999) {
+        cout << "❌ Límite de bitácoras alcanzado (2999)" << endl;
+        return;
+    } //limite establecido para Grupo4
+
+    // Llenar campos
+    entrada.codigo = nuevoCodigo;
+    strncpy(entrada.nombre, nombre.c_str(), sizeof(entrada.nombre));
+    strncpy(entrada.aplicacion, aplicacion.c_str(), sizeof(entrada.aplicacion));
+    strncpy(entrada.accion, accion.c_str(), sizeof(entrada.accion));
+
+    time_t now = time(0);
+    struct tm *timeinfo = localtime(&now);
+    strftime(entrada.fecha, sizeof(entrada.fecha), "%b %d %Y", timeinfo);
+    strftime(entrada.hora, sizeof(entrada.hora), "%H:%M:%S", timeinfo);
+
+    // Guardar en archivo binario
+    binFile.open("bitacora.dat", ios::app | ios::binary);
+    binFile.write(reinterpret_cast<char*>(&entrada), sizeof(entrada));
+    binFile.close();
+}
 
 
-
+void bitacora::desplegar() {
+    system("cls");
+    fstream binFile;
+    EntradaBitacora entrada;
+    int total = 0;
+    //se muestra la bitacora con usuario, fecha, hora y lo que se realizo
+    cout << "\n------------------- Bitácora -------------------\n";
+    binFile.open("bitacora.dat", ios::in | ios::binary);
+    if (!binFile) {
+        cout << "\n\t\t\tNo hay información...\n";
+    } else {
+        while (binFile.read(reinterpret_cast<char*>(&entrada), sizeof(entrada))) {
+            cout << "-----------------------------------------------\n";
+            cout << "[" << total << "] Código:      " << entrada.codigo << "\n";
+            cout << "    Usuario:     " << entrada.nombre << "\n";
+            cout << "    Aplicación:  " << entrada.aplicacion << "\n";
+            cout << "    Acción:      " << entrada.accion << "\n";
+            cout << "    Fecha:       " << entrada.fecha << " " << entrada.hora << "\n";
+            total++;
+        }
+        if (total == 0) {
+            cout << "\n\t\t\tNo hay información...\n";
+        } else {
+            cout << "-----------------------------------------------\n";
+        }
+    }
+    binFile.close();
+    system("pause");
+}
